@@ -167,9 +167,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if (gh release view "$env:GITHUB_REF_NAME" *> $null) {
-            gh release upload "$env:GITHUB_REF_NAME" "$env:ZIP_NAME" --clobber
-            Write-Host "已附加到 release $($env:GITHUB_REF_NAME)"
-          } else {
+          # 注意:GH runner 結束時會帶入最後一個原生命令的 $LASTEXITCODE,
+          # 所以「找不到 release」要明確 exit 0,否則整個 step 會被判失敗。
+          gh release view "$env:GITHUB_REF_NAME" *> $null
+          if ($LASTEXITCODE -ne 0) {
             Write-Host "::notice::release $($env:GITHUB_REF_NAME) 尚未建立,略過上傳。建立後可從本次 artifact 下載 $env:ZIP_NAME 手動附加。"
+            exit 0
           }
+          gh release upload "$env:GITHUB_REF_NAME" "$env:ZIP_NAME" --clobber
+          Write-Host "已附加到 release $($env:GITHUB_REF_NAME)"
